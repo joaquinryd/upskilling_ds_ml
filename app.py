@@ -10,40 +10,43 @@ def main():
     st.set_page_config(layout="wide",
                        initial_sidebar_state='collapsed')
     st.title('Sklearn learning app')
+    numero_clusters = st.slider('Numero de clusters', 2, 10, 5)
     df = load_data()
-    df, kmeans = cluster_dataframe(df)
-    st.write(kmeans['scaler'])
+    df, kmeans, inertias = cluster_dataframe(df, n_clusters=numero_clusters)
+    st.plotly_chart(px.line(inertias))
     promedios = calcular_promedios_por_cluster(df, kmeans)
-    st.write(promedios)
     plot_color(promedios)
-
-    
 
 
 def plot_color(promedios):
-    fig = px.imshow(promedios)
+    inversed_colorscale = px.colors.diverging.RdBu[::-1]
+    fig = px.imshow(promedios, color_continuous_scale=inversed_colorscale, width=1000)
     st.plotly_chart(fig)
 
 
 def calcular_promedios_por_cluster(df: pd.DataFrame, kmeans: Pipeline):
-    scaler = kmeans['scaler']
     cols_sin_cluster = [col for col in df.columns if 'cluster' not in col]
-    df_scaled = pd.DataFrame(scaler.transform(df[cols_sin_cluster]), columns=)
-    st.write(df_scaled)
-    #pd.DataFrame(scaler.transform(df), columns=df.columns)
-    return df.groupby('cluster').mean()
+    scaled_df = df.copy()
+    for col in cols_sin_cluster:
+        scaled_df[col] = (df[col] - df[col].mean())/df[col].std()
+    
+    return scaled_df.groupby('cluster').mean()
 
 
+@st.cache_data()
 def cluster_dataframe(df: pd.DataFrame, n_clusters: int = 5):
     
-    kmeans = Pipeline([
+    pipelines_kmeans = {k: Pipeline([
         ('scaler', StandardScaler()),  # Scale data to have mean=0 and variance=1
-        ('kmeans', KMeans(n_clusters=n_clusters))
-    ])
-    model = kmeans.fit(df)
+        ('kmeans', KMeans(n_clusters=k))
+    ]) for k in range(2, 10)}
+
+    inertias = [kmeans['kmeans'].inertia_ for k, kmeans in pipelines_kmeans.items()]
+
+    model = pipelines_kmeans[n_clusters].fit(df)
     df['cluster'] = model.predict(df)
     
-    return df, kmeans
+    return df, pipelines_kmeans, inertias
 
 
 
