@@ -10,9 +10,10 @@ def main():
     df = load_data()  # Loading the dataset
     df, scaler, centroids = cluster_dataframe(df)  # Clustering the dataset
     st.write(scaler)  # Displaying the scaler parameters (mean and std)
-    promedios = calcular_promedios_por_cluster(df)  # Calculating cluster means
-    st.write(promedios)  # Displaying the cluster means
-    plot_color(promedios)  # Plotting the cluster means
+    scaled_df, mean, std = standard_scale(df)
+    promedio = calcular_promedios_por_cluster(scaled_df)  # Calculating cluster means
+    st.write(promedio)  # Displaying the cluster means
+    plot_color(promedio)
 
 # Function to plot the cluster means using Plotly
 def plot_color(promedios):
